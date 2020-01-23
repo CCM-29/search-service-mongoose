@@ -9,19 +9,19 @@ module.exports = class SearchService {
       const { all } = params
       const opts = buildOptions(params)
       getCollection(model, criteria, opts)
-      .then(collection => setPopulations(model, collection, params))
-      .then(collection => Promise.all([collection, all ? {} : buildHeaders(model, criteria, params)]))
-      .then(([collection, pagination]) => resolve({ collection, pagination }))
-      .catch(reject)
+        .then(collection => setPopulations(model, collection, params))
+        .then(collection => Promise.all([collection, all ? {} : buildHeaders(model, criteria, params)]))
+        .then(([collection, pagination]) => resolve({ collection, pagination }))
+        .catch(reject)
     })
   }
   static searchOne(model, criteria = {}, params = {}) {
     return new Promise((resolve, reject) => {
       const fields = buidFields(params.fields, true)
       model.findOne(criteria, fields)
-      .then(document => setPopulations(model, document, params))
-      .then(resolve)
-      .catch(reject)
+        .then(document => setPopulations(model, document, params))
+        .then(resolve)
+        .catch(reject)
     })
   }
 }
@@ -86,11 +86,11 @@ function buidFields(fields, isEase = false) {
   if (typeof fields === 'string') {
     allowedFields = map(split(fields, ','), field => field.trim());
     allowedFields = allowedFields.reduce((result, field) => {
-      result[startsWith(field, '-') ? field.substring(1): field] = startsWith(field, '-') ? 0 : 1;
+      result[startsWith(field, '-') ? field.substring(1) : field] = startsWith(field, '-') ? 0 : 1;
       return result;
     }, {});
   }
-  
+
   return isEase ? allowedFields : { $project: allowedFields };
 }
 
@@ -110,7 +110,7 @@ function getCollection(model, criteria, opts) {
     query.push(skip, limit)
   }
   if (fields) query.push(fields)
-  return model.aggregate(query)
+  return model.aggregate(query).allowDiskUse(true);
 }
 
 function setPopulations(model, collection, { populations }) {
@@ -124,23 +124,23 @@ function buildHeaders(model, criteria, { limit, isCriteriaPipeline }) {
   return new Promise((resolve, reject) => {
     if (!isCriteriaPipeline) {
       model.countDocuments(criteria)
-      .then(count => {
-        resolve({
-          'X-Pagination-Total-Count': count,
-          'X-Pagination-Limit': limit,
+        .then(count => {
+          resolve({
+            'X-Pagination-Total-Count': count,
+            'X-Pagination-Limit': limit,
+          })
         })
-      })
-      .catch(reject)
+        .catch(reject)
     } else {
       const pipeline = criteria.slice()
       pipeline.push({ $count: 'count' })
       model.aggregate(pipeline)
-      .then(result => {
-        resolve({
-          'X-Pagination-Total-Count': result.length > 0 ? result[0].count : 0,
-          'X-Pagination-Limit': limit,
+        .then(result => {
+          resolve({
+            'X-Pagination-Total-Count': result.length > 0 ? result[0].count : 0,
+            'X-Pagination-Limit': limit,
+          })
         })
-      })
     }
   })
 }
